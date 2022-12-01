@@ -1,0 +1,4 @@
+# Developer ID Installer cert name
+sign_cert="Developer ID Installer: ACME INC (DEV_ID)"
+# profile name used with `notarytool --store-credentials`
+credential_profile="notary"
