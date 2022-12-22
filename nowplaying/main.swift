@@ -10,15 +10,12 @@ import AppKit
 import ArgumentParser
 
 
-struct SongInfo {
-    var title: String
-    var album: String
-    var artist: String
-}
-
 struct NowPlayingOptions: ParsableCommand {
     @Flag(help: "Get artwork")
     var artwork = false
+    
+    @Flag(help: "Get the album link")
+    var album = false
     
     @Flag(help: "Output link to stdout\n(disables clipboard)")
     var stdout = false
@@ -34,33 +31,32 @@ struct NowPlayingOptions: ParsableCommand {
     
     @Flag(help: "Output as a markdown italics")
     var ital = false
+    
+    @Flag(help: "Show version")
+    var version = false
 }
 
 let options = NowPlayingOptions.parseOrExit()
 
 
-func getNowPlayingSongInfo(info: [String : Any]) -> SongInfo? {
-    let song = SongInfo(title: info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? "Unknown", album: info["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? "Unknown", artist: info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? "Unknown")
-    return song
-}
-
-typealias MRMediaRemoteRegisterForNowPlayingNotificationsFunction = @convention(c) (DispatchQueue) -> Void
-typealias MRMediaRemoteGetNowPlayingInfoFunction = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
-typealias MRMediaRemoteGetNowPlayingApplicationIsPlayingFunction = @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
 
 var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
 
-// Load Bundle
-let bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework"))
-guard let MRMediaRemoteGetNowPlayingInfoPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteGetNowPlayingInfo" as CFString) else {
-    fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
-}
-MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPointer, to: MRMediaRemoteGetNowPlayingInfoFunction.self)
+let remote = MediaRemote()
 
-(MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+if options.version {
+    if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+        print(version)
+        exit(EXIT_SUCCESS)
+    } else {
+        print("Unknown version")
+        exit(EXIT_FAILURE)
+    }
+}
+
+(remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
     if options.data
     {
-        
         if information.keys.isEmpty == false {
             for key in information.keys {
                 print(key)
@@ -77,8 +73,8 @@ MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPoi
     }
     if options.str || options.me || options.ital
     {
-        let song = getNowPlayingSongInfo(info: information)
-        var songString = "\(song?.title ?? "Unknown") by \(song?.artist ?? "Unknown") (\(song?.album ?? "Unknown"))"
+        let song = SongInfo(info: information)
+        var songString = song.string()
         if options.me {
             songString = "/me is playing \(songString)"
         }
@@ -105,16 +101,22 @@ MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPoi
         exit(EXIT_SUCCESS)
     }
     // Defualt to copying now playing to the clipboard
-    guard let id = information["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
-    else {
-        exit(EXIT_FAILURE)
+    let songID = SongIDs(info: information)
+    var link: String
+    if options.album {
+        if songID.albumID != nil {
+            link = songID.albumLinkStr()!
+        } else {exit(EXIT_FAILURE)}
+    } else {
+        if songID.songID != nil {
+            link = songID.songLinkStr()!
+        } else {exit(EXIT_FAILURE)}
     }
-    let songLink = String(format: "https://song.link/i/%d", id)
     if options.stdout {
-        print(songLink)
+        print(link)
     } else {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(songLink,
+        NSPasteboard.general.setString(link,
                                        forType: NSPasteboard.PasteboardType.string)
     }
     exit(EXIT_SUCCESS)
