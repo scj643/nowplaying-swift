@@ -67,73 +67,89 @@ if options.bundle {
         print(appBundleIdentifier)
         exit(EXIT_SUCCESS)
     }
-}
-
-(remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
-    if options.data
-    {
-        if information.keys.isEmpty == false {
-            for key in information.keys {
-                print(key)
-                if !key.contains("ArtworkData")
-                {
-                    print(information[key] ?? "None")
+} else if options.listen {
+    var nowPlaying = SongInfo( info: ["Empty": true] )
+    (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+        nowPlaying = SongInfo(info: information)
+    }
+    NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: nil, using: { notification in
+        (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+            let newNowPlaying = SongInfo(info: information)
+            if newNowPlaying.string() != nowPlaying.string() {
+                print(nowPlaying.string())
+                nowPlaying = newNowPlaying
+            }
+        }
+    })
+    remote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
+    
+} else {
+    (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+        if options.data
+        {
+            if information.keys.isEmpty == false {
+                for key in information.keys {
+                    print(key)
+                    if !key.contains("ArtworkData")
+                    {
+                        print(information[key] ?? "None")
+                    }
                 }
+                exit(EXIT_SUCCESS)
+            }
+            else {
+                exit(EXIT_FAILURE)
+            }
+        }
+        if options.str || options.me || options.ital
+        {
+            let song = SongInfo(info: information)
+            var songString = song.string()
+            if options.me {
+                songString = "/me is playing \(songString)"
+            }
+            if options.ital {
+                songString = "_is playing \(songString)_"
+            }
+            if options.stdout {
+                print(songString)
+            } else {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(songString,
+                                               forType: NSPasteboard.PasteboardType.string)
             }
             exit(EXIT_SUCCESS)
         }
-        else {
-            exit(EXIT_FAILURE)
+        if options.artwork
+        {
+            guard let artwork = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data
+            else {
+                exit(EXIT_FAILURE)
+            }
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setData(artwork, forType: NSPasteboard.PasteboardType.png)
+            exit(EXIT_SUCCESS)
         }
-    }
-    if options.str || options.me || options.ital
-    {
-        let song = SongInfo(info: information)
-        var songString = song.string()
-        if options.me {
-            songString = "/me is playing \(songString)"
-        }
-        if options.ital {
-            songString = "_is playing \(songString)_"
+        // Defualt to copying now playing to the clipboard
+        let songID = SongIDs(info: information)
+        var link: String
+        if options.album {
+            if songID.albumID != nil {
+                link = songID.albumLinkStr()!
+            } else {exit(EXIT_FAILURE)}
+        } else {
+            if songID.songID != nil {
+                link = songID.songLinkStr()!
+            } else {exit(EXIT_FAILURE)}
         }
         if options.stdout {
-            print(songString)
+            print(link)
         } else {
             NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(songString,
+            NSPasteboard.general.setString(link,
                                            forType: NSPasteboard.PasteboardType.string)
         }
         exit(EXIT_SUCCESS)
     }
-    if options.artwork
-    {
-        guard let artwork = information["kMRMediaRemoteNowPlayingInfoArtworkData"] as? Data
-        else {
-            exit(EXIT_FAILURE)
-        }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setData(artwork, forType: NSPasteboard.PasteboardType.png)
-        exit(EXIT_SUCCESS)
-    }
-    // Defualt to copying now playing to the clipboard
-    let songID = SongIDs(info: information)
-    var link: String
-    if options.album {
-        if songID.albumID != nil {
-            link = songID.albumLinkStr()!
-        } else {exit(EXIT_FAILURE)}
-    } else {
-        if songID.songID != nil {
-            link = songID.songLinkStr()!
-        } else {exit(EXIT_FAILURE)}
-    }
-    if options.stdout {
-        print(link)
-    } else {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(link,
-                                       forType: NSPasteboard.PasteboardType.string)
-    }
-    exit(EXIT_SUCCESS)
 }
 dispatchMain()

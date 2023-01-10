@@ -140,8 +140,6 @@ class NowPlayingService {
     var nowPlayingIDs: SongIDs?
     
     init() {
-        mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
-        
         observers = []
         for o in NowPlayingNotificationsChanges.all {
             observers.append(
@@ -150,6 +148,7 @@ class NowPlayingService {
                 })
             )
         }
+        self.mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
         updateSong()
     }
     
@@ -192,10 +191,10 @@ class ObservableNowPlayingService: ObservableObject {
     private var observer: NSObjectProtocol?
     
     init() {
-        self.mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
         self.observer = NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: .main, using: { notification in
             self.updateSongs()
         })
+        self.mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
         updateSongs()
     }
     
