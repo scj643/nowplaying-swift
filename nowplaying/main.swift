@@ -46,7 +46,11 @@ let remote = MediaRemoteBridge()
 
 if options.version {
     if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-        print(version)
+        #if DEBUG
+        print("\(version)-DEBUG")
+        #else
+        print("\(version)-RELEASE")
+        #endif
         exit(EXIT_SUCCESS)
     } else {
         print("Unknown version")

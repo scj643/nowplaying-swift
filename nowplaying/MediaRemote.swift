@@ -54,10 +54,10 @@ class SongInfo: NowPlayingInfo {
 
 class SongIDs: NowPlayingInfo {
     var songID: Int? {
-            return info["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
+        return info["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
     }
     var albumID: Int? {
-            return info["kMRMediaRemoteNowPlayingInfoAlbumiTunesStoreAdamIdentifier"] as? Int
+        return info["kMRMediaRemoteNowPlayingInfoAlbumiTunesStoreAdamIdentifier"] as? Int
     }
     
     private func strToUrl(string: String?) -> URL? {
