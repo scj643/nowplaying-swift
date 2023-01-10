@@ -76,7 +76,7 @@ if options.bundle {
         (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
             let newNowPlaying = SongInfo(info: information)
             if newNowPlaying.string() != nowPlaying.string() {
-                print(nowPlaying.string())
+                print(newNowPlaying.string())
                 nowPlaying = newNowPlaying
             }
         }
