@@ -23,30 +23,54 @@ struct NowPlayingNotificationsChanges {
     static let all = [info, queue, isPlaying, application]
 }
 
-class SongInfo {
-    var title: String
-    var album: String
-    var artist: String
-    
+class NowPlayingInfo {
+    var info: [String : Any]
     init(info: [String : Any]) {
-        title = info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? "Unknown"
-        album = info["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? "Unknown"
-        artist = info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? "Unknown"
+        self.info = info
+    }
+}
+
+class SongInfo: NowPlayingInfo {
+    var title: String? {
+        return self.info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? nil
+    }
+    var album: String? {
+        return self.info["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? nil
+    }
+    var artist: String? {
+        return self.info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? nil
     }
     
     func string() -> String {
-        return "\(title) by \(artist) (\(album))"
+        var returnString = ""
+        if (self.title != nil) {
+            returnString += "\(title!)"
+        }
+        if (self.artist != nil) {
+            returnString += " by \(artist!)"
+        }
+        if (self.album != nil) {
+            returnString += " (\(album!))"
+        }
+        return returnString
     }
 }
 
 
-class SongIDs {
-    var songID: Int?
-    var albumID: Int?
+class SongIDs: NowPlayingInfo {
+    var songID: Int? {
+            return info["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
+    }
+    var albumID: Int? {
+            return info["kMRMediaRemoteNowPlayingInfoAlbumiTunesStoreAdamIdentifier"] as? Int
+    }
     
-    init(info: [String : Any]) {
-        songID = info["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
-        albumID = info["kMRMediaRemoteNowPlayingInfoAlbumiTunesStoreAdamIdentifier"] as? Int
+    private func strToUrl(string: String?) -> URL? {
+        if string != nil {
+            return URL(string: string!)
+        } else {
+            return nil
+        }
     }
     
     func songLinkStr() -> String? {
@@ -66,61 +90,42 @@ class SongIDs {
     }
     
     func songLink() -> URL? {
-        if songID != nil {
-            return URL(string: songLinkStr()!)
-        } else {
-            return nil
-        }
+        return strToUrl(string: songLinkStr())
     }
     
     func albumLink() -> URL? {
-        if albumID != nil {
-            return URL(string: albumLinkStr()!)
-        } else {
-            return nil
-        }
+        return strToUrl(string: albumLinkStr())
     }
 }
 
 
-class MediaRemote {
-    var bundle: CFBundle
-    private var MRMediaRemoteGetNowPlayingInfoPointer: UnsafeMutableRawPointer
+// Helper struct for Media Remote functions
+struct MediaRemoteBridge {
     var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
-    init() {
-        bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: BUNDLE_LOCATION))
-        // TODO: Better handling of failures
-        guard let MRMediaRemoteGetNowPlayingInfoPointer = CFBundleGetFunctionPointerForName(self.bundle, "MRMediaRemoteGetNowPlayingInfo" as CFString) else { fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo") }
-        self.MRMediaRemoteGetNowPlayingInfoPointer = MRMediaRemoteGetNowPlayingInfoPointer
-        self.MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPointer, to: MRMediaRemoteGetNowPlayingInfoFunction.self)
-    }
-
-}
-
-@available(macOS 10.15, *)
-class NowPlayingService:ObservableObject {
-    var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
-    
-    private var observers: [NSObjectProtocol?]
-    
-    @Published var nowPlaying: SongInfo?
-    @Published var nowPlayingIDs: SongIDs?
+    var MRMediaRemoteRegisterForNowPlayingNotifications: MRMediaRemoteRegisterForNowPlayingNotificationsFunction
+    let bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: BUNDLE_LOCATION))
     
     init() {
-        nowPlaying = nil
-        // TODO: Split this out to it's own function
-        let bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: BUNDLE_LOCATION))
-        guard let MRMediaRemoteRegisterForNowPlayingNotificationsPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteRegisterForNowPlayingNotifications" as CFString) else {
-            fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
-        }
-        let MRMediaRemoteRegisterForNowPlayingNotifications = unsafeBitCast(MRMediaRemoteRegisterForNowPlayingNotificationsPointer, to: MRMediaRemoteRegisterForNowPlayingNotificationsFunction.self)
-        
-        MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
-        
         guard let MRMediaRemoteGetNowPlayingInfoPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteGetNowPlayingInfo" as CFString) else {
             fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
         }
-        MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPointer, to: MRMediaRemoteGetNowPlayingInfoFunction.self)
+        self.MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPointer, to: MRMediaRemoteGetNowPlayingInfoFunction.self)
+        
+        guard let MRMediaRemoteRegisterForNowPlayingNotificationsPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteRegisterForNowPlayingNotifications" as CFString) else {
+        fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
+        }
+        self.MRMediaRemoteRegisterForNowPlayingNotifications = unsafeBitCast(MRMediaRemoteRegisterForNowPlayingNotificationsPointer, to: MRMediaRemoteRegisterForNowPlayingNotificationsFunction.self)
+    }
+}
+
+class NowPlayingService {
+    let mediaRemote = MediaRemoteBridge()
+    private var observers: [NSObjectProtocol?]
+    var nowPlaying: SongInfo?
+    var nowPlayingIDs: SongIDs?
+    
+    init() {
+        mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
         
         observers = []
         for o in NowPlayingNotificationsChanges.all {
@@ -132,6 +137,7 @@ class NowPlayingService:ObservableObject {
         }
         updateSong()
     }
+    
     deinit {
         for observer in observers {
             if let observer = observer {
@@ -141,7 +147,7 @@ class NowPlayingService:ObservableObject {
     }
     
     func updateSong() {
-        (MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+        (mediaRemote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
             self.nowPlaying = SongInfo(info: information)
             self.nowPlayingIDs = SongIDs(info: information)
         }
@@ -163,3 +169,31 @@ class NowPlayingService:ObservableObject {
     }
 }
 
+@available(macOS 10.15, *)
+class ObservableNowPlayingService: ObservableObject {
+    @Published var nowPlaying: SongInfo?
+    @Published var nowPlayingIDs: SongIDs?
+    private var mediaRemote = MediaRemoteBridge()
+    private var observer: NSObjectProtocol?
+    
+    init() {
+        self.mediaRemote.MRMediaRemoteRegisterForNowPlayingNotifications(DispatchQueue.main)
+        self.observer = NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: .main, using: { notification in
+            self.updateSongs()
+        })
+        updateSongs()
+    }
+    
+    deinit {
+        if let observer = observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    func updateSongs() {
+        (self.mediaRemote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
+            self.nowPlaying = SongInfo(info: information)
+            self.nowPlayingIDs = SongIDs(info: information)
+            print(self.nowPlaying?.string() ?? "NA")
+        }
+    }
+}

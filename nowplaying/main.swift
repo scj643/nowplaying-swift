@@ -34,6 +34,9 @@ struct NowPlayingOptions: ParsableCommand {
     
     @Flag(help: "Show version")
     var version = false
+    
+    @Flag(help: "Listen for nowplaying changes")
+    var listen = false
 }
 
 let options = NowPlayingOptions.parseOrExit()
@@ -42,7 +45,7 @@ let options = NowPlayingOptions.parseOrExit()
 
 var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
 
-let remote = MediaRemote()
+let remote = MediaRemoteBridge()
 
 if options.version {
     if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
