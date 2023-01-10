@@ -208,7 +208,6 @@ class ObservableNowPlayingService: ObservableObject {
         (self.mediaRemote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
             self.nowPlaying = SongInfo(info: information)
             self.nowPlayingIDs = SongIDs(info: information)
-            print(self.nowPlaying?.string() ?? "NA")
         }
     }
 }
