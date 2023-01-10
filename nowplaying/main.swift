@@ -42,9 +42,6 @@ struct NowPlayingOptions: ParsableCommand {
 let options = NowPlayingOptions.parseOrExit()
 
 
-
-var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
-
 let remote = MediaRemoteBridge()
 
 if options.version {

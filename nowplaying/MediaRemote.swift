@@ -9,11 +9,6 @@ import Foundation
 
 let BUNDLE_LOCATION = "/System/Library/PrivateFrameworks/MediaRemote.framework"
 
-// MediaRemote types
-typealias MRMediaRemoteRegisterForNowPlayingNotificationsFunction = @convention(c) (DispatchQueue) -> Void
-typealias MRMediaRemoteGetNowPlayingInfoFunction = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
-typealias MRMediaRemoteGetNowPlayingApplicationIsPlayingFunction = @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
-
 
 struct NowPlayingNotificationsChanges {
     static let info = Notification.Name("kMRMediaRemoteNowPlayingInfoDidChangeNotification")
@@ -101,8 +96,18 @@ class SongIDs: NowPlayingInfo {
 
 // Helper struct for Media Remote functions
 struct MediaRemoteBridge {
+    // MediaRemote types
+    typealias MRMediaRemoteRegisterForNowPlayingNotificationsFunction = @convention(c) (DispatchQueue) -> Void
+    typealias MRMediaRemoteGetNowPlayingInfoFunction = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
+    typealias MRMediaRemoteGetNowPlayingApplicationIsPlayingFunction = @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
+    typealias MRNowPlayingClientGetBundleIdentifierFunction = @convention(c) (AnyObject?) -> String
+    typealias MRMediaRemoteGetNowPlayingClientFunction = @convention(c) (DispatchQueue, @escaping (AnyObject) -> Void) -> Void
+    
     var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
     var MRMediaRemoteRegisterForNowPlayingNotifications: MRMediaRemoteRegisterForNowPlayingNotificationsFunction
+    var MRNowPlayingClientGetBundleIdentifier: MRNowPlayingClientGetBundleIdentifierFunction
+    var MRMediaRemoteGetNowPlayingClient: MRMediaRemoteGetNowPlayingClientFunction
+    
     let bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: BUNDLE_LOCATION))
     
     init() {
@@ -112,9 +117,19 @@ struct MediaRemoteBridge {
         self.MRMediaRemoteGetNowPlayingInfo = unsafeBitCast(MRMediaRemoteGetNowPlayingInfoPointer, to: MRMediaRemoteGetNowPlayingInfoFunction.self)
         
         guard let MRMediaRemoteRegisterForNowPlayingNotificationsPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteRegisterForNowPlayingNotifications" as CFString) else {
-        fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
+            fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingInfo")
         }
         self.MRMediaRemoteRegisterForNowPlayingNotifications = unsafeBitCast(MRMediaRemoteRegisterForNowPlayingNotificationsPointer, to: MRMediaRemoteRegisterForNowPlayingNotificationsFunction.self)
+        
+        guard let MRNowPlayingClientGetBundleIdentifierPointer = CFBundleGetFunctionPointerForName(bundle, "MRNowPlayingClientGetBundleIdentifier" as CFString) else {
+            fatalError("Failed to get function pointer: MRNowPlayingClientGetBundleIdentifier")
+        }
+        MRNowPlayingClientGetBundleIdentifier = unsafeBitCast(MRNowPlayingClientGetBundleIdentifierPointer, to: MRNowPlayingClientGetBundleIdentifierFunction.self)
+        
+        guard let MRMediaRemoteGetNowPlayingClientPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteGetNowPlayingClient" as CFString) else {
+            fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingClient")
+        }
+        MRMediaRemoteGetNowPlayingClient = unsafeBitCast(MRMediaRemoteGetNowPlayingClientPointer, to: MRMediaRemoteGetNowPlayingClientFunction.self)
     }
 }
 
