@@ -37,6 +37,9 @@ struct NowPlayingOptions: ParsableCommand {
     
     @Flag(help: "Listen for nowplaying changes")
     var listen = false
+    
+    @Flag(help: "Get bundle ID of nowplaying app")
+    var bundle = false
 }
 
 let options = NowPlayingOptions.parseOrExit()
@@ -55,6 +58,14 @@ if options.version {
     } else {
         print("Unknown version")
         exit(EXIT_FAILURE)
+    }
+}
+
+if options.bundle {
+    (remote.MRMediaRemoteGetNowPlayingClient)(DispatchQueue.main) { clientObject in
+        let appBundleIdentifier = remote.MRNowPlayingClientGetBundleIdentifier(clientObject)
+        print(appBundleIdentifier)
+        exit(EXIT_SUCCESS)
     }
 }
 
