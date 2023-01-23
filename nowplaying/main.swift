@@ -17,10 +17,10 @@ struct NowPlayingOptions: ParsableCommand {
     @Flag(help: "Get the album link")
     var album = false
     
-    @Flag(help: "Output link to stdout\n(disables clipboard)")
+    @Flag(name:.shortAndLong, help: "Output link to stdout\n(disables clipboard)")
     var stdout = false
     
-    @Flag(help: "Print data of now playing")
+    @Flag(name:.shortAndLong, help: "Print data of now playing")
     var data = false
     
     @Flag(help: "Output as a /me is now playing text")
@@ -32,7 +32,7 @@ struct NowPlayingOptions: ParsableCommand {
     @Flag(help: "Output as a markdown italics")
     var ital = false
     
-    @Flag(help: "Show version")
+    @Flag(name:.shortAndLong, help: "Show version")
     var version = false
     
     @Flag(help: "Listen for nowplaying changes")
@@ -40,6 +40,9 @@ struct NowPlayingOptions: ParsableCommand {
     
     @Flag(help: "Get bundle ID of nowplaying app")
     var bundle = false
+    
+    @Flag(help: "Get name of nowplaying app")
+    var name = false
 }
 
 let options = NowPlayingOptions.parseOrExit()
@@ -67,10 +70,17 @@ if options.bundle {
         print(appBundleIdentifier)
         exit(EXIT_SUCCESS)
     }
+} else if options.name {
+    (remote.MRMediaRemoteGetNowPlayingClient)(DispatchQueue.main) { clientObject in
+        let appName = remote.MRNowPlayingClientGetDisplayName(clientObject)
+        print(appName)
+        exit(EXIT_SUCCESS)
+    }
 } else if options.listen {
     var nowPlaying = SongInfo( info: ["Empty": true] )
     (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
         nowPlaying = SongInfo(info: information)
+        print(nowPlaying.string())
     }
     NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: nil, using: { notification in
         (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in

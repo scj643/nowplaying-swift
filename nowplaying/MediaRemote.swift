@@ -101,11 +101,13 @@ struct MediaRemoteBridge {
     typealias MRMediaRemoteGetNowPlayingInfoFunction = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
     typealias MRMediaRemoteGetNowPlayingApplicationIsPlayingFunction = @convention(c) (DispatchQueue, @escaping (Bool) -> Void) -> Void
     typealias MRNowPlayingClientGetBundleIdentifierFunction = @convention(c) (AnyObject?) -> String
+    typealias MRNowPlayingClientGetDisplayNameFunction = @convention(c) (AnyObject?) -> String
     typealias MRMediaRemoteGetNowPlayingClientFunction = @convention(c) (DispatchQueue, @escaping (AnyObject) -> Void) -> Void
     
     var MRMediaRemoteGetNowPlayingInfo: MRMediaRemoteGetNowPlayingInfoFunction
     var MRMediaRemoteRegisterForNowPlayingNotifications: MRMediaRemoteRegisterForNowPlayingNotificationsFunction
     var MRNowPlayingClientGetBundleIdentifier: MRNowPlayingClientGetBundleIdentifierFunction
+    var MRNowPlayingClientGetDisplayName: MRNowPlayingClientGetDisplayNameFunction
     var MRMediaRemoteGetNowPlayingClient: MRMediaRemoteGetNowPlayingClientFunction
     
     let bundle = CFBundleCreate(kCFAllocatorDefault, NSURL(fileURLWithPath: BUNDLE_LOCATION))
@@ -126,6 +128,11 @@ struct MediaRemoteBridge {
         }
         MRNowPlayingClientGetBundleIdentifier = unsafeBitCast(MRNowPlayingClientGetBundleIdentifierPointer, to: MRNowPlayingClientGetBundleIdentifierFunction.self)
         
+        guard let MRNowPlayingClientGetDisplayNamePointer = CFBundleGetFunctionPointerForName(bundle, "MRNowPlayingClientGetDisplayName" as CFString) else {
+            fatalError("Failed to get function pointer: MRNowPlayingClientGetDisplayName")
+        }
+        MRNowPlayingClientGetDisplayName = unsafeBitCast(MRNowPlayingClientGetDisplayNamePointer, to: MRNowPlayingClientGetDisplayNameFunction.self)
+
         guard let MRMediaRemoteGetNowPlayingClientPointer = CFBundleGetFunctionPointerForName(bundle, "MRMediaRemoteGetNowPlayingClient" as CFString) else {
             fatalError("Failed to get function pointer: MRMediaRemoteGetNowPlayingClient")
         }
