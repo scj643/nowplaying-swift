@@ -10,7 +10,19 @@ import AppKit
 import ArgumentParser
 
 
+var ver = "Unknown"
+if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+    #if DEBUG
+    ver = "\(version)-DEBUG"
+    #else
+    ver = "\(version)-RELEASE"
+    #endif
+} else {
+    ver = "Unknown"
+}
+
 struct NowPlayingOptions: ParsableCommand {
+    static var configuration = CommandConfiguration(commandName: "nowplaying", version: ver)
     @Flag(help: "Get artwork")
     var artwork = false
     
@@ -32,9 +44,6 @@ struct NowPlayingOptions: ParsableCommand {
     @Flag(help: "Output as a markdown italics")
     var ital = false
     
-    @Flag(name:.shortAndLong, help: "Show version")
-    var version = false
-    
     @Flag(help: "Listen for nowplaying changes")
     var listen = false
     
@@ -49,20 +58,6 @@ let options = NowPlayingOptions.parseOrExit()
 
 
 let remote = MediaRemoteBridge()
-
-if options.version {
-    if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-        #if DEBUG
-        print("\(version)-DEBUG")
-        #else
-        print("\(version)-RELEASE")
-        #endif
-        exit(EXIT_SUCCESS)
-    } else {
-        print("Unknown version")
-        exit(EXIT_FAILURE)
-    }
-}
 
 if options.bundle {
     (remote.MRMediaRemoteGetNowPlayingClient)(DispatchQueue.main) { clientObject in
