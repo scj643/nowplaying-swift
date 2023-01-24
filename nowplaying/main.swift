@@ -72,14 +72,14 @@ if options.bundle {
         exit(EXIT_SUCCESS)
     }
 } else if options.listen {
-    var nowPlaying = SongInfo( info: ["Empty": true] )
+    var nowPlaying = NowPlayingInfo( info: ["Empty": true] )
     (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
-        nowPlaying = SongInfo(info: information)
+        nowPlaying = NowPlayingInfo(info: information)
         print(nowPlaying.string())
     }
     NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: nil, using: { notification in
         (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
-            let newNowPlaying = SongInfo(info: information)
+            let newNowPlaying = NowPlayingInfo(info: information)
             if newNowPlaying.string() != nowPlaying.string() {
                 print(newNowPlaying.string())
                 nowPlaying = newNowPlaying
@@ -108,7 +108,7 @@ if options.bundle {
         }
         if options.str || options.me || options.ital
         {
-            let song = SongInfo(info: information)
+            let song = NowPlayingInfo(info: information)
             var songString = song.string()
             if options.me {
                 songString = "/me is playing \(songString)"
@@ -136,15 +136,15 @@ if options.bundle {
             exit(EXIT_SUCCESS)
         }
         // Defualt to copying now playing to the clipboard
-        let songID = SongIDs(info: information)
+        let song = NowPlayingInfo(info: information)
         var link: String
         if options.album {
-            if songID.albumID != nil {
-                link = songID.albumLinkStr()!
+            if song.albumID != nil {
+                link = song.albumLinkStr()!
             } else {exit(EXIT_FAILURE)}
         } else {
-            if songID.songID != nil {
-                link = songID.songLinkStr()!
+            if song.songID != nil {
+                link = song.songLinkStr()!
             } else {exit(EXIT_FAILURE)}
         }
         if options.stdout {

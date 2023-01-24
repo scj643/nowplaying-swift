@@ -23,9 +23,7 @@ class NowPlayingInfo {
     init(info: [String : Any]) {
         self.info = info
     }
-}
-
-class SongInfo: NowPlayingInfo {
+    
     var title: String? {
         return self.info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? nil
     }
@@ -49,10 +47,7 @@ class SongInfo: NowPlayingInfo {
         }
         return returnString
     }
-}
-
-
-class SongIDs: NowPlayingInfo {
+    
     var songID: Int? {
         return info["kMRMediaRemoteNowPlayingInfoiTunesStoreIdentifier"] as? Int
     }
@@ -143,8 +138,7 @@ struct MediaRemoteBridge {
 class NowPlayingService {
     let mediaRemote = MediaRemoteBridge()
     private var observers: [NSObjectProtocol?]
-    var nowPlaying: SongInfo?
-    var nowPlayingIDs: SongIDs?
+    var nowPlaying: NowPlayingInfo?
     
     init() {
         observers = []
@@ -169,8 +163,7 @@ class NowPlayingService {
     
     func updateSong() {
         (mediaRemote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
-            self.nowPlaying = SongInfo(info: information)
-            self.nowPlayingIDs = SongIDs(info: information)
+            self.nowPlaying = NowPlayingInfo(info: information)
         }
     }
     func handleNowPlayingChanged(notification: Notification) {
@@ -192,8 +185,7 @@ class NowPlayingService {
 
 @available(macOS 10.15, *)
 class ObservableNowPlayingService: ObservableObject {
-    @Published var nowPlaying: SongInfo?
-    @Published var nowPlayingIDs: SongIDs?
+    @Published var nowPlaying: NowPlayingInfo?
     private var mediaRemote = MediaRemoteBridge()
     private var observer: NSObjectProtocol?
     
@@ -212,8 +204,7 @@ class ObservableNowPlayingService: ObservableObject {
     }
     func updateSongs() {
         (self.mediaRemote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
-            self.nowPlaying = SongInfo(info: information)
-            self.nowPlayingIDs = SongIDs(info: information)
+            self.nowPlaying = NowPlayingInfo(info: information)
         }
     }
 }
