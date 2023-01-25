@@ -72,7 +72,7 @@ class NowPlayingInfo {
     }
     
     func albumLinkStr() -> String? {
-        if songID != nil {
+        if albumID != nil {
             return String(format: "https://album.link/i/%d", albumID!)
         } else {
             return nil
