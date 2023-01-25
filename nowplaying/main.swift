@@ -52,6 +52,9 @@ struct NowPlayingOptions: ParsableCommand {
     
     @Flag(help: "Get name of nowplaying app")
     var name = false
+    
+    @Flag(help: "Use discord")
+    var discord = false
 }
 
 let options = NowPlayingOptions.parseOrExit()
@@ -76,6 +79,13 @@ if options.bundle {
     (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
         nowPlaying = NowPlayingInfo(info: information)
         print(nowPlaying.string())
+        if options.discord {
+            if #available(macOS 11.0, *) {
+                let discordClient = Discord()
+                discordClient.connect()
+                discordClient.listen()
+            }
+        }
     }
     NotificationCenter.default.addObserver(forName: NowPlayingNotificationsChanges.info, object: nil, queue: nil, using: { notification in
         (remote.MRMediaRemoteGetNowPlayingInfo)(DispatchQueue.main) { information in
